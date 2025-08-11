@@ -12,3 +12,28 @@ class InputEmbedding(nn.Module):
     def forward(self, x):
         return self.embedding(x)*math.sqrt(self.d_model)
         
+
+
+class PositionalEncoding(nn.Module):
+    def __init__(self, d_model:int, seq_len:int , dropout: int)-> None:
+        super().__init__()
+        self.d_model= d_model
+        self.seq_len=seq_len
+        self.dropout=nn.Dropout(dropout)
+        
+        # next we need to initialize a matrix of ( seq_len , d_model) aka seq_len tokens of d_model size 
+        pe = torch.zeros(self.seq_len, self.d_model)
+        
+        # next we need to create the postions and denominator of following the formula on the paper , we use exp(log(formula)) because we can ensure calculation stability , we can't directly calculate it ( very big )
+        positions=torch.arange(0,seq_len,dtype=float).unsqueeze(1)
+        div_term= torch.exp(torch.arange(0,d_model,2).float*(-torch.log(10000)/d_model))
+        # apply sin and cosin to even and odd positions of the vector respectively
+        pe[:,0::2]=torch.sin(positions*div_term)
+        pe[:,1::2]=torch.cos(positions*div_term)
+        pe= pe.unsqueeze(0)
+        # making the shape of the sentence (1 , seq , d_model ) since this will work onlty for 1 sentence but we have many sentences         
+        self.register_buffer("pe",pe)
+    def forward(self,x):
+        x= x+self.pe[:,x.shape[1],:].requires_grad_(False) # Shape: (1, actual_seq_len, d_model)
+        # Positional encodings are fixed and should not be learned during training
+        return self.dropout(x)
