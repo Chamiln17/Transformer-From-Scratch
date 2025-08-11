@@ -37,3 +37,17 @@ class PositionalEncoding(nn.Module):
         x= x+self.pe[:,x.shape[1],:].requires_grad_(False) # Shape: (1, actual_seq_len, d_model)
         # Positional encodings are fixed and should not be learned during training
         return self.dropout(x)
+    
+    
+class LayerNormalization(nn.Module):
+    
+    def __init__(self,eps:float=10**-6)->None:
+        super().__init__()
+        self.eps=eps # to ensure that we don't devide by zero 
+        self.alpha=nn.Parameter(torch.ones(1))# it's the learnable parameter that we multiply the formula with
+        self.bias=nn.Parameter(torch.zeros(1))# it's the learnable parameter that we add to the formula 
+        
+    def forward(self,x):
+        mean=x.mean(dim=-1,keepdim=True)# dim= -1 meaning we want to calculate the mean of the last dimension of the tensor (d_model)
+        std=x.std(dim=-1,keepdim=True) # and keepdim is used to make us be able to do the addition in the next step since we cant's do it without having same dimension z
+        return self.alpha*(x-mean)/(std+self.eps) +self.bias 
