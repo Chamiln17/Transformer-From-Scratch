@@ -51,3 +51,16 @@ class LayerNormalization(nn.Module):
         mean=x.mean(dim=-1,keepdim=True)# dim= -1 meaning we want to calculate the mean of the last dimension of the tensor (d_model)
         std=x.std(dim=-1,keepdim=True) # and keepdim is used to make us be able to do the addition in the next step since we cant's do it without having same dimension z
         return self.alpha*(x-mean)/(std+self.eps) +self.bias 
+    
+class FeedForward(nn.Module):
+    def __init__(self, d_model:int, d_ff:int , dropout:float):
+        super().__init__()
+        self.linear1= nn.Linear(d_model, d_ff) # from the paper it's W1 & B1
+        self.dropout= nn.Dropout(dropout)
+        self.linear2= nn.Linear(d_ff,d_model) # from the paper it's W2 & B2
+    def forward(self , x): # FFN(x) = max(0, xW1 + b1)W2 + b2
+        x= self.linear1(x)
+        x = torch.relu(x)  # Apply ReLU 
+        x= self.dropout(x)
+        return self.linear2(x)
+        
