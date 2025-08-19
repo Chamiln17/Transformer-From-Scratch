@@ -59,8 +59,61 @@ class FeedForward(nn.Module):
         self.dropout= nn.Dropout(dropout)
         self.linear2= nn.Linear(d_ff,d_model) # from the paper it's W2 & B2
     def forward(self , x): # FFN(x) = max(0, xW1 + b1)W2 + b2
+        # (Batch , seq_len , d_model ) --> (Batch , seq_len , d_ff )--> ( batch , seq_len , d_model) 
         x= self.linear1(x)
         x = torch.relu(x)  # Apply ReLU 
         x= self.dropout(x)
         return self.linear2(x)
+
+
+class MultiHeadAttentionBlock(nn.Module):
+    def __init__(self, d_model:int , h:int , dropout: float):
+        super().__init__()
+        self.d_model= d_model
+        self.h=h
+        assert d_model % h !=0 , "d_model is not divisible by h"
         
+        self.d_k = d_model // h
+        self.Wq= nn.Linear(d_model,d_model)
+        self.Wk= nn.Linear(d_model,d_model)
+        self.Wv= nn.Linear(d_model,d_model)
+
+        self.dropout=nn.Dropout(dropout)
+        self.Wo=nn.Linear(d_model,d_model)
+        
+    @staticmethod
+    def attention(self ,query , key , value , mask , dropout: nn.Dropout):
+        d_k= self.query[-1]
+        
+        #(batch, h, seq_len , d_k ) --> (batch , h , seq_len , seq_len) (self attention matrix kinda)
+        attention_scores = (query @ key.transpose(-2,-1))/math.sqrt(d_k)
+        
+        if mask is not None : 
+            attention_scores.masked_fill_(mask==0, -1e-9)
+        attention_scores= attention_scores.softmax(dim=-1)# (batch , h , seq_len , seq_len)
+        if dropout is not None: 
+            attention_scores= dropout(attention_scores) 
+        return (attention_scores @ value) , attention_scores # for visualizations we return the attention scores too , the final dim is (batch ,h , seq_len , d_k)
+        
+    def forward(self , q , k , v , mask): 
+        query = self.Wq(q) # (batch , seq_len , d_model)
+        key= self.Wq(k) # (batch , seq_len , d_model)
+        value= self.Wv(v) # (batch , seq_len , d_model)
+        
+        query = query.view(query.shape[0], query.shape[1], self.h, self.k).transpose(1,2) # (batch, seq_len , h, k) --> (batch, h , seq_len , k) so we want that each head will have a view for all the sentence but only K part of the embbedings
+        key = key.view(key.shape[0], key.shape[1], self.h, self.k).transpose(1,2) # (batch, seq_len , h, k) --> (batch, h , seq_len , k) so we want that each head will have a view for all the sentence but only K part of the embbedings
+        value = value.view(value.shape[0], value.shape[1], self.h, self.k).transpose(1,2) # (batch, seq_len , h, k) --> (batch, h , seq_len , k) so we want that each head will have a view for all the sentence but only K part of the embbedings
+        
+        x, self.attention_scores = MultiHeadAttentionBlock.attention(query , key , value , mask , self.dropout)  #(batch ,h , seq_len , d_k)
+        
+        # (batch ,h , seq_len , d_k) --> (batch , seq_len , h, d_k) --> (batch , seq_len , d_model) final goal
+        x= x.trasnpose(1,2).contiguous().view(x.shape[0],-1, self.h*self.d_k) 
+        
+        # we started from (batch , seq_len , d_model) to (batch , seq_len , d_model)
+        return self.Wo(x)
+        
+        
+        
+        
+
+         
