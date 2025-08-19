@@ -71,7 +71,7 @@ class MultiHeadAttentionBlock(nn.Module):
         super().__init__()
         self.d_model= d_model
         self.h=h
-        assert d_model % h !=0 , "d_model is not divisible by h"
+        assert d_model % h == 0 , "d_model is not divisible by h"
         
         self.d_k = d_model // h
         self.Wq= nn.Linear(d_model,d_model)
@@ -82,8 +82,8 @@ class MultiHeadAttentionBlock(nn.Module):
         self.Wo=nn.Linear(d_model,d_model)
         
     @staticmethod
-    def attention(self ,query , key , value , mask , dropout: nn.Dropout):
-        d_k= self.query[-1]
+    def attention(query , key , value , mask , dropout: nn.Dropout):
+        d_k= query.shape[-1]
         
         #(batch, h, seq_len , d_k ) --> (batch , h , seq_len , seq_len) (self attention matrix kinda)
         attention_scores = (query @ key.transpose(-2,-1))/math.sqrt(d_k)
@@ -97,17 +97,17 @@ class MultiHeadAttentionBlock(nn.Module):
         
     def forward(self , q , k , v , mask): 
         query = self.Wq(q) # (batch , seq_len , d_model)
-        key= self.Wq(k) # (batch , seq_len , d_model)
+        key= self.Wk(k) # (batch , seq_len , d_model)
         value= self.Wv(v) # (batch , seq_len , d_model)
         
-        query = query.view(query.shape[0], query.shape[1], self.h, self.k).transpose(1,2) # (batch, seq_len , h, k) --> (batch, h , seq_len , k) so we want that each head will have a view for all the sentence but only K part of the embbedings
-        key = key.view(key.shape[0], key.shape[1], self.h, self.k).transpose(1,2) # (batch, seq_len , h, k) --> (batch, h , seq_len , k) so we want that each head will have a view for all the sentence but only K part of the embbedings
-        value = value.view(value.shape[0], value.shape[1], self.h, self.k).transpose(1,2) # (batch, seq_len , h, k) --> (batch, h , seq_len , k) so we want that each head will have a view for all the sentence but only K part of the embbedings
+        query = query.view(query.shape[0], query.shape[1], self.h, self.d_k).transpose(1,2) # (batch, seq_len , h, k) --> (batch, h , seq_len , k) so we want that each head will have a view for all the sentence but only K part of the embbedings
+        key = key.view(key.shape[0], key.shape[1], self.h, self.d_k).transpose(1,2) # (batch, seq_len , h, k) --> (batch, h , seq_len , k) so we want that each head will have a view for all the sentence but only K part of the embbedings
+        value = value.view(value.shape[0], value.shape[1], self.h, self.d_k).transpose(1,2) # (batch, seq_len , h, k) --> (batch, h , seq_len , k) so we want that each head will have a view for all the sentence but only K part of the embbedings
         
         x, self.attention_scores = MultiHeadAttentionBlock.attention(query , key , value , mask , self.dropout)  #(batch ,h , seq_len , d_k)
         
         # (batch ,h , seq_len , d_k) --> (batch , seq_len , h, d_k) --> (batch , seq_len , d_model) final goal
-        x= x.trasnpose(1,2).contiguous().view(x.shape[0],-1, self.h*self.d_k) 
+        x= x.transpose(1,2).contiguous().view(x.shape[0],-1, self.h*self.d_k) # we use contiguous since After transpose(), tensor data might not be stored contiguously in memory. contiguous() ensures the tensor is stored in a contiguous block, which is required for view() operations. 
         
         # we started from (batch , seq_len , d_model) to (batch , seq_len , d_model)
         return self.Wo(x)
