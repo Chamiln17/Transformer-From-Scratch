@@ -112,14 +112,30 @@ class MultiHeadAttentionBlock(nn.Module):
         # we started from (batch , seq_len , d_model) to (batch , seq_len , d_model)
         return self.Wo(x)
         
-    class ResidualConnection(nn.Module):
-        def __init__(self, dropout:float):
-            super().__init__()
-            self.dropout=nn.Dropout(dropout)
-            self.norm=LayerNormalization()
-            
-        def forward(self, x , sublayer):
-            return x+ self.dropout(sublayer(self.norm(x))) # in paper it is self.norm(sublayer(x)) but many implmentations do this 
+class ResidualConnection(nn.Module):
+    def __init__(self, dropout:float):
+        super().__init__()
+        self.dropout=nn.Dropout(dropout)
+        self.norm=LayerNormalization()
+        
+    def forward(self, x , sublayer):
+        return x+ self.dropout(sublayer(self.norm(x))) # in paper it is self.norm(sublayer(x)) but many implmentations do this 
+        
+        
+class EncoderBlock(nn.Module):
+    def __init__(self, self_attention_block: MultiHeadAttentionBlock,feedforward_block:FeedForward,dropout:float):
+        super().__init__()
+        self.self_attention_block=self_attention_block
+        self.feedforward_block=feedforward_block
+        self.residual_connection= nn.ModuleList([ResidualConnection(dropout) for _ in range(2)])
+        
+    def forward(self, x, src_mask):
+        x= self.residual_connection[0](x, lambda x: self.self_attention_block(x,x,x,src_mask))
+        x= self.residual_connection[1](x, lambda x: self.feedforward_block(x))
+        return x
+    
+
+        
         
         
 
