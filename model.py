@@ -159,6 +159,15 @@ class DecoderBlock(nn.Module):
         x=self.residual_connections[2](x,lambda x: self.feed_forward_block(x))
         return x
         
+class Decoder(nn.Module):
+    def __init__(self, layers:nn.ModuleList):
+        super().__init__()
+        self.layers=layers
+        self.norm=LayerNormalization()
+    def forward(self, x , encoder_output, enc_mask , dec_mask):
+        for layer in self.layers:
+            x=layer(x, encoder_output,enc_mask,dec_mask) # same as in the encoder and the encoder output is shared across all the decoder blocks
+        return self.norm(x)
         
 
 
