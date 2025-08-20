@@ -168,7 +168,15 @@ class Decoder(nn.Module):
         for layer in self.layers:
             x=layer(x, encoder_output,enc_mask,dec_mask) # same as in the encoder and the encoder output is shared across all the decoder blocks
         return self.norm(x)
-        
+
+
+class ProjectLayer(nn.Module):
+    def __init__(self, d_model:int , vocab_size:int):
+        super().__init__()
+        self.proj=nn.Linear(d_model,vocab_size)
+    # (bacth , seq_len , d_model ) --> (batch , seq_len , vocab_size)
+    def forward(self, x):
+        return torch.log_softmax(self.proj(x),dim=-1) # so we are having like a multi class clasification model where it takes the features from the output of the decoder and try to predict the most probable class ( next token )
 
 
 
