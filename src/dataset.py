@@ -20,6 +20,7 @@ class BilingualDataset(Dataset):
     def __len__(self):
         return len(self.ds)
     
+
     def __getitem__(self, index):
         src_target_pair= self.ds[index]
         src_text = src_target_pair["translation"][self.src_lang]
@@ -76,11 +77,13 @@ class BilingualDataset(Dataset):
             "encoder_inputs":encoder_inputs,# [seq_len]
             "decoder_inpurts":decoder_inputs, # [seq_len]
             "encoder_mask":(encoder_inputs != self.pad_token).unsqueeze(0).unsqueeze(0).int(), # [1, 1, seq_len] 
-            "decoder_mask":(decoder_inputs != self.pad_token).unsqueeze(0).unsqueeze(0).int() & causal_mask(decoder_inputs.size(0)), # [1, seq_len, seq_len] 
+            "decoder_mask":(decoder_inputs != self.pad_token).unsqueeze(0).unsqueeze(0).int() & self.causal_mask(decoder_inputs.size(0)), # [1, seq_len, seq_len] 
             "label":label # [seq_len]
         }
         
     def causal_mask(self, size):
+        mask = torch.triu(torch.ones(1,size,size),diagonal=1).type(torch.int)
+        return mask ==0
             
         
 
