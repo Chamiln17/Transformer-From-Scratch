@@ -202,43 +202,43 @@ class Transformer(nn.Module):
     def project(self,x):
         return self.projection_layer(x)
     
-    def build_transformer(self,src_vocab_size:int, tgt_vocab_size :int, src_seq_len :int, tgt_seq_len:int, d_model:int =512 , h:int=8 , d_ff:int=2048, N:int = 6, dropout:float=0.1):
-        # we first create the embedding layer for decoder & encoder
-        src_embed= InputEmbedding(d_model,src_vocab_size)
-        tgt_embed= InputEmbedding(d_model,tgt_vocab_size)
-        
-        src_pos = PositionalEncoding(d_model, src_seq_len,dropout)
-        tgt_pos = PositionalEncoding(d_model, tgt_seq_len, dropout)
-        
-        encoder_blocks=[]# actually using the classes we previously defiend to create the encoder layers
-        for _ in range(N):
-            encoder_self_attention= MultiHeadAttentionBlock(d_model, h , dropout)
-            encoder_feed_forward= FeedForward(d_model, d_ff, dropout)
-            encoder_block= EncoderBlock(encoder_self_attention, encoder_feed_forward, dropout)
-            encoder_blocks.append(encoder_block)
-        
-        decoder_blocks=[]# we create the decoder layers
-        for _ in range(N):
-            decoder_self_attention_block = MultiHeadAttentionBlock(d_model, h, dropout)
-            decoder_cross_attention_block = MultiHeadAttentionBlock(d_model, h , dropout)
-            decoder_feed_forward_block=FeedForward(d_model, d_ff, dropout)
-            decoder_block= DecoderBlock(decoder_self_attention_block, decoder_cross_attention_block, decoder_feed_forward_block, dropout)
-            decoder_blocks.append(decoder_block)
-        
-        encoder=Encoder(nn.ModuleList(encoder_blocks))
-        decoder=Decoder(nn.ModuleList(decoder_blocks))
-        
-        # defining the linear layer 
-        project_layer= ProjectLayer(d_model, tgt_vocab_size)
-        
-        # at the end we define the transformer
-        transformer = Transformer(encoder, decoder, src_embed, tgt_embed, src_pos, tgt_pos, project_layer)
-        
-        # we need to better initialize the parameters so we will use xiaver initialization since it's the most widely used 
-        for p in transformer.parameters():
-            if p.dim()>1:
-                nn.init.xavier_uniform_(p)
-        return transformer
+def build_transformer(src_vocab_size:int, tgt_vocab_size :int, src_seq_len :int, tgt_seq_len:int, d_model:int =512 , h:int=8 , d_ff:int=2048, N:int = 6, dropout:float=0.1)-> Transformer:
+    # we first create the embedding layer for decoder & encoder
+    src_embed= InputEmbedding(d_model,src_vocab_size)
+    tgt_embed= InputEmbedding(d_model,tgt_vocab_size)
+    
+    src_pos = PositionalEncoding(d_model, src_seq_len,dropout)
+    tgt_pos = PositionalEncoding(d_model, tgt_seq_len, dropout)
+    
+    encoder_blocks=[]# actually using the classes we previously defiend to create the encoder layers
+    for _ in range(N):
+        encoder_self_attention= MultiHeadAttentionBlock(d_model, h , dropout)
+        encoder_feed_forward= FeedForward(d_model, d_ff, dropout)
+        encoder_block= EncoderBlock(encoder_self_attention, encoder_feed_forward, dropout)
+        encoder_blocks.append(encoder_block)
+    
+    decoder_blocks=[]# we create the decoder layers
+    for _ in range(N):
+        decoder_self_attention_block = MultiHeadAttentionBlock(d_model, h, dropout)
+        decoder_cross_attention_block = MultiHeadAttentionBlock(d_model, h , dropout)
+        decoder_feed_forward_block=FeedForward(d_model, d_ff, dropout)
+        decoder_block= DecoderBlock(decoder_self_attention_block, decoder_cross_attention_block, decoder_feed_forward_block, dropout)
+        decoder_blocks.append(decoder_block)
+    
+    encoder=Encoder(nn.ModuleList(encoder_blocks))
+    decoder=Decoder(nn.ModuleList(decoder_blocks))
+    
+    # defining the linear layer 
+    project_layer= ProjectLayer(d_model, tgt_vocab_size)
+    
+    # at the end we define the transformer
+    transformer = Transformer(encoder, decoder, src_embed, tgt_embed, src_pos, tgt_pos, project_layer)
+    
+    # we need to better initialize the parameters so we will use xiaver initialization since it's the most widely used 
+    for p in transformer.parameters():
+        if p.dim()>1:
+            nn.init.xavier_uniform_(p)
+    return transformer
             
             
         
