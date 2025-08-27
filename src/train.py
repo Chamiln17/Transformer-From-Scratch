@@ -1,10 +1,10 @@
 import torch 
 import torch.nn as nn
-from torch.utils.data import DataLoader, Dataset , random_split
+from torch.utils.data import DataLoader , random_split
 from torch.utils.tensorboard import SummaryWriter
 
 from dataset import BilingualDataset ,causal_mask
-from  model import build_transformer
+from model import build_transformer 
 from config import get_config , get_weights_file_path
 
 from datasets import load_dataset
@@ -13,6 +13,8 @@ from tokenizers.models import WordLevel
 from tokenizers.trainers import WordLevelTrainer
 from tokenizers.pre_tokenizers import Whitespace
 from pathlib import Path
+from tqdm import tqdm 
+import  warnings 
 
 
 
@@ -101,3 +103,52 @@ def train_model(config):
         global_step = state["global_step"]
         
     loss_fn = nn.CrossEntropyLoss(ignore_index=tokenizer_src.token_to_id("[PAD]"), lable_smoothing=0.1).to(device)
+    
+    for epoch in range(initiale_epoch, config["num_epochs"]):
+        model.train()
+        batch_iterator= tqdm(train_dataloader,desc=f"Processing epoch {epoch:02d}")
+        for batch in batch_iterator:
+            
+            encoder_input = batch["encoder_inputs"].to(device) # (B , seq_len)
+            decoder_input = batch["decoder_inputs"].to(device) # (B ,seq_len)
+            encoder_mask = batch["encoder_mask"].to(device) # (B , 1 , 1, Seq_len)
+            decoder_mask = batch["decoder_mask"].to(device) # (B, 1 , Seq_len , Seq_len)
+            
+            encoder_output= model.encode(encoder_input, encoder_mask) # B seq_len , d_model
+            decoder_output = model.decode(encoder_output, encoder_mask, decoder_input, decoder_mask) # (B , seq_len , d_model )
+            proj_output = model.project(decoder_output) # (B , seq_len , tgt_vocab_size )
+
+            label = batch["label"].to(device) # (B , seq_len)
+            
+            # (B , seq_len , tgt_vocab_size ) -> (B * seq_len , tgt_vocab_size)
+			# (B , seq_len ) -> (B * seq_len)
+            loss = loss_fn(proj_output.view(-1, tokenizer_tgt.get_vocab_size()), label.view(-1))
+            batch.set_postfix({"loss":f"{loss.item():6.3f}"})
+            
+            # log the loss value
+            writer.add_scalar("Loss/train", loss.item(), global_step)
+            writer.flush()
+            
+            # backpropagate the loss
+            loss.backward()
+            
+            # update the weights
+            optimizer.step()
+            optimizer.zero_grad()
+   
+			# increment the global step for tensorboard
+            global_step += 1
+        # save the model after each epoch
+        model_filename = get_weights_file_path(config, f'epoch{epoch:02d}')
+        torch.save({
+			"epoch": epoch,
+			"model_state_dict": model.state_dict(),
+			"optimizer_state_dict": optimizer.state_dict(),
+			"global_step": global_step
+		}, model_filename)
+        
+if __name__=="__main__":
+    warnings.filterwarnings("ignore")
+    config= get_config()
+    train_model(config=config)
+            
