@@ -147,6 +147,32 @@ def train_model(config):
 			"global_step": global_step
 		}, model_filename)
         
+  
+  
+def greedy_decoding(model , source , source_mask , tokenizer_src , tokenizer_tgt, max_len , device):
+    sos_idx=tokenizer_src.token_to_id(["[SOS]"])
+    eos_idx=tokenizer_src.token_to_id(["[EOS]"])
+            
+def run_validation(model , val_ds, tokenizer_src , tokenizer_tgt , max_len , device , print_msg, global_state , writer , num_examples=2):
+    model.eval()
+    count= 0
+    
+    source_texts = []
+    expected = []
+    predicted = []
+    
+    # size of the control window (just use a default  value)
+    console_width=80
+    
+    with torch.no_grad():
+        for batch in val_ds:
+            count+=1
+            encoder_input= batch["encoder_inputs"].to(device)
+            encoder_mask= batch["encoder_mask"].to(device)
+            
+            assert encoder_input.size(0) == 1 , "Batch size must be 1 for validation"
+            
+            
 if __name__=="__main__":
     warnings.filterwarnings("ignore")
     config= get_config()
