@@ -152,19 +152,10 @@ def train_model(config):
 def greedy_decoding(model , source , source_mask , tokenizer_src , tokenizer_tgt, max_len , device):
     sos_idx=tokenizer_src.token_to_id(["[SOS]"])
     eos_idx=tokenizer_src.token_to_id(["[EOS]"])
-    # start with the sos token
-    output_indices = [sos_idx]
-    for i in range(max_len):
-        output = torch.Tensor(output_indices).unsqueeze(0).to(device)
-        output_mask = causal_mask(output.size(1)).to(device)
-        encoder_output = model.encode(source, source_mask)
-        decoder_output = model.decode(encoder_output, source_mask, output, output_mask)
-        projected_output = model.project(decoder_output)
-        next_token = projected_output.argmax(-1)[:,-1].item()
-        output_indices.append(next_token)
-        if next_token == eos_idx:
-            break
-    return output_indices
+    
+    # pre compute the  encoder output and reuse it for every token we get  from the decoder
+    encoder_output = model.encode(source, source_mask)
+    
 
     
             
