@@ -105,9 +105,9 @@ def train_model(config):
     loss_fn = nn.CrossEntropyLoss(ignore_index=tokenizer_src.token_to_id("[PAD]"), lable_smoothing=0.1).to(device)
     
     for epoch in range(initiale_epoch, config["num_epochs"]):
-        model.train()
         batch_iterator= tqdm(train_dataloader,desc=f"Processing epoch {epoch:02d}")
         for batch in batch_iterator:
+            model.train()   
             
             encoder_input = batch["encoder_inputs"].to(device) # (B , seq_len)
             decoder_input = batch["decoder_inputs"].to(device) # (B ,seq_len)
@@ -135,6 +135,8 @@ def train_model(config):
             # update the weights
             optimizer.step()
             optimizer.zero_grad()
+            
+            run_validation(model, val_dataloader, tokenizer_src, tokenizer_tgt, config["seq_len"], device, batch_iterator.write, global_step, writer)
    
 			# increment the global step for tensorboard
             global_step += 1
@@ -197,6 +199,25 @@ def run_validation(model , val_ds, tokenizer_src , tokenizer_tgt , max_len , dev
             
             assert encoder_input.size(0) == 1 , "Batch size must be 1 for validation"
             
+            model_output= greedy_decoding(model,encoder_input,encoder_mask,tokenizer_src,tokenizer_tgt,max_len,device)
+            
+            source_text= batch["src_text"][0]
+            target_text= batch["tgt_text"][0]
+            
+            model_output_text= tokenizer_tgt.decode(model_output.detach().cpu().numpy())
+            
+            # append to each list 
+            source_texts.append(source_text)
+            expected.append(target_text)
+            predicted.append(model_output_text)
+            
+            # print using custom function to not interfere with tqdm progres bar
+            print_msg("-"*50)
+            print_msg(f"SOURCE: {source_text}")
+            print_msg(f"TARGET TRUE: {target_text}")
+            print_msg(f"PREDICTED: {model_output_text}")
+            if count == num_examples:
+                break 
             
 if __name__=="__main__":
     warnings.filterwarnings("ignore")
