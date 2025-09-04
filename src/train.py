@@ -155,9 +155,28 @@ def greedy_decoding(model , source , source_mask , tokenizer_src , tokenizer_tgt
     
     # pre compute the  encoder output and reuse it for every token we get  from the decoder
     encoder_output = model.encode(source, source_mask)
+    # initialize the decoder input with the sos token
+    decoder_input= torch.empty(1,1).fill_(sos_idx).type_as(source).to(device)
     
-
-    
+    while True:
+        if decoder_input.size(1)== max_len:# we check the second dimension because the first is for the batch
+            break
+        
+        # build mask for the target (decoder input ) 
+        decoder_mask = causal_mask(decoder_input.size(1)).type_as(source_mask).to(device)
+        
+        # we calculate the output from the decoder
+        decoder_output = model.decode(encoder_output,source_mask,decoder_input, decoder_mask)
+        
+        # get next token 
+        prob= model.project(decoder_output[:,-1])
+        # select the token with max probability , that is how greedy decoding works
+        _, next_word=torch.max(prob,dim=1)
+        decoder_input= torch.cat(decoder_input, torch.empty(1,1).fill_(next_word.item()).type_as(source).to(device),dim=1)
+        
+        if next_word== eos_idx:
+            break
+        return decoder_input.squeeze(0)    
             
 def run_validation(model , val_ds, tokenizer_src , tokenizer_tgt , max_len , device , print_msg, global_state , writer , num_examples=2):
     model.eval()
