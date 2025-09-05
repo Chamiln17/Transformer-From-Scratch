@@ -38,37 +38,32 @@ class BilingualDataset(Dataset):
         # adding SOS & EOS token and the padding at the end 
 
         encoder_inputs = torch.cat(
-            
             [
-                self.sos_token,
-                torch.Tensor(enc_input_tokens),
-                self.eos_token,
-                torch.Tensor(enc_num_padding_tokens * [self.pad_token], dtype=torch.int64)
-                
+            self.sos_token,
+            torch.tensor(enc_input_tokens, dtype=torch.int64),
+            self.eos_token,
+            torch.full((enc_num_padding_tokens,), self.pad_token.item(), dtype=torch.int64),
             ]
-        )
+            )
         
         # adding only SOS special token
         decoder_inputs = torch.cat(
-            
             [
                 self.sos_token,
-                torch.Tensor(enc_input_tokens, dtype=torch.int64 ),
-                torch.Tensor(dec_num_padding_tokens * [self.pad_token], dtype=torch.int64)
-                
+                torch.tensor(dec_input_tokens, dtype=torch.int64),
+                torch.full((dec_num_padding_tokens,), self.pad_token.item(), dtype=torch.int64),
             ]
-        )
+            )
+        
         # adding only EOS special token
-
         label = torch.cat(
-            
             [
-                torch.Tensor(enc_input_tokens, dtype=torch.int64 ),
+                torch.tensor(dec_input_tokens, dtype=torch.int64),
                 self.eos_token,
-                torch.Tensor(dec_num_padding_tokens * [self.pad_token], dtype=torch.int64)
-                
+                torch.full((dec_num_padding_tokens,), self.pad_token.item(), dtype=torch.int64),
             ]
-        )
+            )
+        
         assert encoder_inputs.size(0) == self.seq_len
         assert decoder_inputs.size(0) == self.seq_len
         assert label.size(0) == self.seq_len
@@ -76,16 +71,19 @@ class BilingualDataset(Dataset):
         return {
             "encoder_inputs":encoder_inputs,# [seq_len]
             "decoder_inputs":decoder_inputs, # [seq_len]
-            "encoder_mask":(encoder_inputs != self.pad_token).unsqueeze(0).unsqueeze(0).int(), # [1, 1, seq_len] 
-            "decoder_mask":(decoder_inputs != self.pad_token).unsqueeze(0).unsqueeze(0).int() & causal_mask(decoder_inputs.size(0)), # [1, seq_len, seq_len] 
+            # Build boolean masks: True means keep/attend; compare against scalar PAD id
+            "encoder_mask": (encoder_inputs != self.pad_token.item()).unsqueeze(0).unsqueeze(0), # [1, 1, seq_len] 
+            "decoder_mask": (decoder_inputs != self.pad_token.item()).unsqueeze(0).unsqueeze(0) & causal_mask(decoder_inputs.size(0)), # [1, seq_len, seq_len] 
             "label":label ,# [seq_len]
             "src_text":src_text,
             "tgt_text":tgt_text,
         }
         
-def causal_mask(self, size):
-    mask = torch.triu(torch.ones(1,size,size),diagonal=1).type(torch.int)
-    return mask ==0
+def causal_mask(size):
+    # Upper-triangular True above the main diagonal → positions we must NOT attend to
+    mask = torch.triu(torch.ones(1, size, size, dtype=torch.bool), diagonal=1)
+    # We return the inverse so True means "can attend" (lower-triangular incl. diagonal)
+    return ~mask
             
         
 

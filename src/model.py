@@ -15,7 +15,7 @@ class InputEmbedding(nn.Module):
 
 
 class PositionalEncoding(nn.Module):
-    def __init__(self, d_model:int, seq_len:int , dropout: int)-> None:
+    def __init__(self, d_model:int, seq_len:int , dropout: float)-> None:
         super().__init__()
         self.d_model= d_model
         self.seq_len=seq_len
@@ -34,8 +34,8 @@ class PositionalEncoding(nn.Module):
         # making the shape of the sentence (1 , seq , d_model ) since this will work onlty for 1 sentence but we have many sentences         
         self.register_buffer("pe",pe)
     def forward(self,x):
-        x= x+self.pe[:,:x.shape[1],:].requires_grad_(False) # Shape: (1, actual_seq_len, d_model)
-        # Positional encodings are fixed and should not be learned during training
+        x = x + self.pe[:,:x.shape[1],:] # Shape: (1, actual_seq_len, d_model)
+        # Positional encodings are fixed via buffer; no need to set requires_grad here
         return self.dropout(x)
     
     

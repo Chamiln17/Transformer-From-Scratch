@@ -86,6 +86,7 @@ def train_model(config):
     
     train_dataloader, val_dataloader, tokenizer_src, tokenizer_tgt = get_ds(config=config)    
     model = get_model(config=config, vocab_size_src=tokenizer_src.get_vocab_size(), vocab_size_tgt=tokenizer_tgt.get_vocab_size())
+    model = model.to(device)
     
     # TensorBoard to visualize the summary 
     
@@ -102,7 +103,7 @@ def train_model(config):
         optimizer.load_state_dict(state["optimizer_state_dict"])
         global_step = state["global_step"]
         
-    loss_fn = nn.CrossEntropyLoss(ignore_index=tokenizer_src.token_to_id("[PAD]"), label_smoothing=0.1).to(device)
+    loss_fn = nn.CrossEntropyLoss(ignore_index=tokenizer_tgt.token_to_id("[PAD]"), label_smoothing=0.1).to(device)
     
     for epoch in range(initiale_epoch, config["num_epochs"]):
         batch_iterator= tqdm(train_dataloader,desc=f"Processing epoch {epoch:02d}")
@@ -115,7 +116,7 @@ def train_model(config):
             decoder_mask = batch["decoder_mask"].to(device) # (B, 1 , Seq_len , Seq_len)
             
             encoder_output= model.encode(encoder_input, encoder_mask) # B seq_len , d_model
-            decoder_output = model.decode(encoder_output, encoder_mask, decoder_input, decoder_mask) # (B , seq_len , d_model )
+            decoder_output = model.decode(decoder_input, encoder_output, encoder_mask, decoder_mask) # (B , seq_len , d_model )
             proj_output = model.project(decoder_output) # (B , seq_len , tgt_vocab_size )
 
             label = batch["label"].to(device) # (B , seq_len)
@@ -123,7 +124,7 @@ def train_model(config):
             # (B , seq_len , tgt_vocab_size ) -> (B * seq_len , tgt_vocab_size)
 			# (B , seq_len ) -> (B * seq_len)
             loss = loss_fn(proj_output.view(-1, tokenizer_tgt.get_vocab_size()), label.view(-1))
-            batch.set_postfix({"loss":f"{loss.item():6.3f}"})
+            batch_iterator.set_postfix({"loss":f"{loss.item():6.3f}"})
             
             # log the loss value
             writer.add_scalar("Loss/train", loss.item(), global_step)
@@ -152,13 +153,13 @@ def train_model(config):
   
   
 def greedy_decoding(model , source , source_mask , tokenizer_src , tokenizer_tgt, max_len , device):
-    sos_idx=tokenizer_src.token_to_id(["[SOS]"])
-    eos_idx=tokenizer_src.token_to_id(["[EOS]"])
+    sos_idx=tokenizer_tgt.token_to_id("[SOS]")
+    eos_idx=tokenizer_tgt.token_to_id("[EOS]")
     
     # pre compute the  encoder output and reuse it for every token we get  from the decoder
     encoder_output = model.encode(source, source_mask)
     # initialize the decoder input with the sos token
-    decoder_input= torch.empty(1,1).fill_(sos_idx).type_as(source).to(device)
+    decoder_input = torch.full((1, 1), sos_idx, dtype=torch.long, device=device)
     
     while True:
         if decoder_input.size(1)== max_len:# we check the second dimension because the first is for the batch
@@ -168,17 +169,20 @@ def greedy_decoding(model , source , source_mask , tokenizer_src , tokenizer_tgt
         decoder_mask = causal_mask(decoder_input.size(1)).type_as(source_mask).to(device)
         
         # we calculate the output from the decoder
-        decoder_output = model.decode(encoder_output,source_mask,decoder_input, decoder_mask)
+        decoder_output = model.decode(decoder_input,encoder_output,source_mask, decoder_mask)
         
         # get next token 
-        prob= model.project(decoder_output[:,-1])
+        prob= model.project(decoder_output[:,-1, :])
         # select the token with max probability , that is how greedy decoding works
         _, next_word=torch.max(prob,dim=1)
-        decoder_input= torch.cat(decoder_input, torch.empty(1,1).fill_(next_word.item()).type_as(source).to(device),dim=1)
+        # append the next word to the decoder input
+        next_idx=next_word.item()
+        decoder_input= torch.cat([decoder_input, torch.tensor([[next_idx]], dtype=torch.long, device=device)],dim=1)
         
-        if next_word== eos_idx:
+        if next_idx== eos_idx:
             break
-        return decoder_input.squeeze(0)    
+    # remove the first token because we don't need it anymore
+    return decoder_input.squeeze(0)[1:]
             
 def run_validation(model , val_ds, tokenizer_src , tokenizer_tgt , max_len , device , print_msg, global_state , writer , num_examples=2):
     model.eval()
@@ -204,7 +208,11 @@ def run_validation(model , val_ds, tokenizer_src , tokenizer_tgt , max_len , dev
             source_text= batch["src_text"][0]
             target_text= batch["tgt_text"][0]
             
-            model_output_text= tokenizer_tgt.decode(model_output.detach().cpu().numpy())
+            ids = model_output.detach().cpu().tolist()
+            eos_id = tokenizer_tgt.token_to_id("[EOS]")
+            if eos_id in ids:
+                ids = ids[:ids.index(eos_id)]
+            model_output_text = tokenizer_tgt.decode(ids)
             
             # append to each list 
             source_texts.append(source_text)
