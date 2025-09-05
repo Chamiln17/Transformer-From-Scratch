@@ -24,7 +24,7 @@ def get_all_sentences(ds, lang):
 
 
 def get_or_build_tokenizer(config, ds, lang):
-	tokenizer_path = Path(config["tokenizer_file"].format(lang))
+	tokenizer_path = Path(config["tokenizer_name"].format(lang))
 	# use instance method exists() – Path.exists(...) is not correct
 	if not tokenizer_path.exists():
 		tokenizer = Tokenizer(WordLevel(unk_token="[UNK]"))
@@ -102,7 +102,7 @@ def train_model(config):
         optimizer.load_state_dict(state["optimizer_state_dict"])
         global_step = state["global_step"]
         
-    loss_fn = nn.CrossEntropyLoss(ignore_index=tokenizer_src.token_to_id("[PAD]"), lable_smoothing=0.1).to(device)
+    loss_fn = nn.CrossEntropyLoss(ignore_index=tokenizer_src.token_to_id("[PAD]"), label_smoothing=0.1).to(device)
     
     for epoch in range(initiale_epoch, config["num_epochs"]):
         batch_iterator= tqdm(train_dataloader,desc=f"Processing epoch {epoch:02d}")
