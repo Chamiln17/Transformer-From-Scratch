@@ -54,7 +54,7 @@ Input Embeddings + Positional Encoding
 - ✅ **Custom Tokenizer**: Word-level tokenization with special tokens
 - ✅ **Training Pipeline**: Complete training loop with validation
 - ✅ **TensorBoard Integration**: Real-time training monitoring
-- ✅ **Model Checkpointing**: Saves a checkpoint after each epoch (resuming does not yet restore the model weights)
+- ✅ **Model Checkpointing**: Saves a checkpoint after each epoch and resumes from one via `preload`
 - ✅ **Greedy Decoding**: Inference with greedy search algorithm
 - ✅ **Configurable Architecture**: Easy parameter modification
 - ✅ **Clean Code Structure**: Well-documented and modular design
