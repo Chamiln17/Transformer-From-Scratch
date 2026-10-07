@@ -123,7 +123,7 @@ uv run tensorboard --logdir runs/tmodel
 
 ### Evaluation
 
-During training, the model automatically runs validation after every training step and displays:
+During training, the model automatically runs validation at the end of each epoch and displays:
 - Source sentence (English)
 - Target sentence (French)
 - Predicted translation

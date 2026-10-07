@@ -137,11 +137,13 @@ def train_model(config):
             # update the weights
             optimizer.step()
             optimizer.zero_grad()
-            
-            run_validation(model, val_dataloader, tokenizer_src, tokenizer_tgt, config["seq_len"], device, batch_iterator.write, global_step, writer)
    
 			# increment the global step for tensorboard
             global_step += 1
+
+        # run validation at the end of each epoch
+        run_validation(model, val_dataloader, tokenizer_src, tokenizer_tgt, config["seq_len"], device, batch_iterator.write, global_step, writer)
+
         # save the model after each epoch
         model_filename = get_weights_file_path(config, f'epoch{epoch:02d}')
         torch.save({
