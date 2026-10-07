@@ -75,7 +75,11 @@ def get_model(config, vocab_size_src:int, vocab_size_tgt:int):
         tgt_vocab_size=vocab_size_tgt,
         src_seq_len=config["seq_len"],
         tgt_seq_len=config["seq_len"],
-		d_model=config["d_model"])
+		d_model=config["d_model"],
+		h=config["h"],
+		d_ff=config["d_ff"],
+		N=config["N"],
+		dropout=config["dropout"])
     return model
 def train_model(config):
     # define the device 
@@ -100,6 +104,7 @@ def train_model(config):
         print(f"Preloading model {model_filename}")
         state = torch.load(model_filename)
         initiale_epoch=state["epoch"] +1
+        model.load_state_dict(state["model_state_dict"])
         optimizer.load_state_dict(state["optimizer_state_dict"])
         global_step = state["global_step"]
         
@@ -136,11 +141,13 @@ def train_model(config):
             # update the weights
             optimizer.step()
             optimizer.zero_grad()
-            
-            run_validation(model, val_dataloader, tokenizer_src, tokenizer_tgt, config["seq_len"], device, batch_iterator.write, global_step, writer)
    
 			# increment the global step for tensorboard
             global_step += 1
+
+        # run validation at the end of each epoch
+        run_validation(model, val_dataloader, tokenizer_src, tokenizer_tgt, config["seq_len"], device, batch_iterator.write, global_step, writer)
+
         # save the model after each epoch
         model_filename = get_weights_file_path(config, f'epoch{epoch:02d}')
         torch.save({
