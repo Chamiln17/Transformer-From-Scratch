@@ -168,6 +168,10 @@ def get_config():
         "lr": 10**-4,              # Learning rate
         "seq_len": 400,            # Maximum sequence length
         "d_model": 512,            # Model dimension
+        "h": 8,                    # Attention heads
+        "d_ff": 2048,              # Feed-forward dimension
+        "N": 6,                    # Encoder/decoder layers
+        "dropout": 0.1,            # Dropout rate
         "lang_src": "en",          # Source language
         "lang_tgt": "fr",          # Target language
         "model_folder": "weights", # Model save directory

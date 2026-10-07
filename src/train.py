@@ -75,7 +75,11 @@ def get_model(config, vocab_size_src:int, vocab_size_tgt:int):
         tgt_vocab_size=vocab_size_tgt,
         src_seq_len=config["seq_len"],
         tgt_seq_len=config["seq_len"],
-		d_model=config["d_model"])
+		d_model=config["d_model"],
+		h=config["h"],
+		d_ff=config["d_ff"],
+		N=config["N"],
+		dropout=config["dropout"])
     return model
 def train_model(config):
     # define the device 
