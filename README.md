@@ -6,6 +6,8 @@
 
 This repository contains a complete implementation of the Transformer architecture described in the paper **"Attention Is All You Need"** by Vaswani et al. (2017). The implementation is built from scratch using PyTorch and focuses on machine translation between English and French.
 
+I built it by following Umar Jamil's walkthrough ["Coding a Transformer from scratch on PyTorch, with full explanation, training and inference"](https://www.youtube.com/watch?v=ISNdQcPhsts) and its reference code, [hkproj/pytorch-transformer](https://github.com/hkproj/pytorch-transformer). The reference translates English to Italian; this version targets English to French on OPUS Books.
+
 ## Status
 
 The model, tokenizers, training and validation loops, and greedy decoding are implemented. Training was started but not completed, because I had no GPU. There are no trained weights or results.
@@ -223,6 +225,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Acknowledgments
 
+- Umar Jamil's video ["Coding a Transformer from scratch on PyTorch, with full explanation, training and inference"](https://www.youtube.com/watch?v=ISNdQcPhsts) and reference code [hkproj/pytorch-transformer](https://github.com/hkproj/pytorch-transformer), which this project follows. The reference translates English to Italian; this version targets English to French on OPUS Books.
 - Original Transformer paper by Vaswani et al.
 - PyTorch team for the excellent deep learning framework
 - Hugging Face for the datasets library
