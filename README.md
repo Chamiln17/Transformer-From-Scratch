@@ -56,8 +56,8 @@ Input Embeddings + Positional Encoding
 - ✅ **TensorBoard Integration**: Real-time training monitoring
 - ✅ **Model Checkpointing**: Saves a checkpoint after each epoch and resumes from one via `preload`
 - ✅ **Greedy Decoding**: Inference with greedy search algorithm
-- ✅ **Configurable Architecture**: Easy parameter modification
-- ✅ **Clean Code Structure**: Well-documented and modular design
+- ✅ **Configurable Architecture**: Model size, heads, layers and dropout are set in `src/config.py`
+- ✅ **Modular Code Structure**: Model, dataset, configuration and training each live in their own module
 
 ## Requirements
 
@@ -233,7 +233,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Original Transformer paper by Vaswani et al.
 - PyTorch team for the excellent deep learning framework
 - Hugging Face for the datasets library
-- The open-source community for inspiration and feedback
 
 ---
 
